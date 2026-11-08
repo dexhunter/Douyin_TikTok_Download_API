@@ -1,0 +1,52 @@
+{
+  "targets": [
+    {
+      "upstream_repo": "Evil0ctal/Douyin_TikTok_Download_API",
+      "head_sha": "d44264e96cae55a6df341ed4a0b81b3e2d1fbcaf",
+      "file": "src/dtk/signing/native/sm3.py",
+      "function": "_compress",
+      "native_test_cmd": "python osspr-intake/harness/sm3-compress/check.py",
+      "bench_cmd": "python osspr-intake/harness/sm3-compress/bench.py",
+      "baseline_median_ms": 173.8722,
+      "baseline_noise_pct": 0.92,
+      "tests_pass_on_baseline": true,
+      "notes": "On 300 A-Bogus signatures cProfile put 0.95s of 1.13s inside _compress. The 64-round loop itself was 0.44s, and the per-round calls to _rotl (0.30s), _ff and _gg (about 0.05s each) were most of the rest. _expand was only about 0.11s and is already optimized, so leave that function alone. The round helpers are pure 32-bit arithmetic invoked 64 times per 64-byte block, and a real signature hashes several blocks twice. Folding that arithmetic into the loop with the same masks should be faster and keep the digest identical. The bench median is the wall time of 1500 calls on the first block of a Douyin detail query. Noise is the spread of five runs, (max-min)/median."
+    },
+    {
+      "upstream_repo": "Evil0ctal/Douyin_TikTok_Download_API",
+      "head_sha": "d44264e96cae55a6df341ed4a0b81b3e2d1fbcaf",
+      "file": "src/dtk/signing/native/xbogus.py",
+      "function": "rc4_encrypt",
+      "native_test_cmd": "python osspr-intake/harness/xbogus-rc4/check.py",
+      "bench_cmd": "python osspr-intake/harness/xbogus-rc4/bench.py",
+      "baseline_median_ms": 259.5529,
+      "baseline_noise_pct": 0.48,
+      "tests_pass_on_baseline": true,
+      "notes": "On 600 X-Bogus signatures cProfile put 0.08s of 0.18s in rc4_encrypt, the largest pure-Python slice. sign calls it twice: the User-Agent under the three-byte key, and the 19-byte payload under the one-byte key. The time is the 256-step key schedule on a Python list plus a bytearray append per output byte. A pre-sized buffer and tighter schedule arithmetic, with the same swaps and XOR, should keep the ciphertext identical. The bench median is the wall time of 5000 of those two calls. Noise is the spread of five runs, (max-min)/median."
+    },
+    {
+      "upstream_repo": "Evil0ctal/Douyin_TikTok_Download_API",
+      "head_sha": "d44264e96cae55a6df341ed4a0b81b3e2d1fbcaf",
+      "file": "src/dtk/signing/native/abogus.py",
+      "function": "rc4",
+      "native_test_cmd": "python osspr-intake/harness/abogus-rc4/check.py",
+      "bench_cmd": "python osspr-intake/harness/abogus-rc4/bench.py",
+      "baseline_median_ms": 300.7592,
+      "baseline_noise_pct": 0.49,
+      "tests_pass_on_baseline": true,
+      "notes": "Every a_bogus value runs rc4 twice, once for the User-Agent digest and once to seal the body. On 300 signatures cProfile showed about 0.04s inside rc4 and nothing below it: a descending 256-byte S-box, a key schedule that multiplies where textbook RC4 only adds, and the keystream loop. The schedule does not depend on the plaintext and dominates the short body. The same swaps and XOR with less interpreter overhead should be faster. This is not xbogus.rc4_encrypt; the descending box and the multiply are load-bearing. The bench median is the wall time of 4000 of those two calls. Noise is the spread of five runs, (max-min)/median."
+    },
+    {
+      "upstream_repo": "Evil0ctal/Douyin_TikTok_Download_API",
+      "head_sha": "d44264e96cae55a6df341ed4a0b81b3e2d1fbcaf",
+      "file": "src/dtk/signing/native/tiktok_sign.py",
+      "function": "_keystream",
+      "native_test_cmd": "python osspr-intake/harness/tiktok-keystream/check.py",
+      "bench_cmd": "python osspr-intake/harness/tiktok-keystream/bench.py",
+      "baseline_median_ms": 267.378,
+      "baseline_noise_pct": 0.99,
+      "tests_pass_on_baseline": true,
+      "notes": "On 120 TikTok sign calls cProfile put 0.07s of 0.12s in _keystream, and 0.06s of that was _quarter_round, which this function calls eight times per round. The round count is data-dependent, from 5 to 20, and each call emits one 16-word block. Moving the quarter-round arithmetic into the loop removes that call overhead. The odd-round exit and the diagonal quartet (2, 7, 12, 13), where lane 12 is used twice, have to stay or the ciphertext changes. The bench median is the wall time of 5000 calls at 19 rounds, the count for key words 1..12. Noise is the spread of five runs, (max-min)/median."
+    }
+  ]
+}
